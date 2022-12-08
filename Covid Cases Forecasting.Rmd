@@ -1,0 +1,329 @@
+---
+title: "Has Hawaii's Public Health Measures Triumped over Covid? Forecasting Hawaii's Covid Cases"
+Author: "Rex Manglicmot"
+output: 
+  html_notebook: 
+    toc: yes
+---
+## Status: Working Document
+Hi everyone. I'm continuing building my data analysis and R skills. As such, I would love feedback to better improve this project via rexmanglicmot@gmail.com. Any mistakes and misrepresentation of the data are my own.
+
+Things still need to do:
+
+1. Forecast negative cases in ARIMA and Prophet
+2. Ask for feedback on models for additonal analysis
+3. Fill in missing sections to round out project
+4. Check grammar
+
+### Introduction
+</n>
+<center>
+
+![](https://d1l18ops95qbzp.cloudfront.net/wp-content/2020/07/12164217/COVID-mask-surfer-waimanalo-beach-640x496.jpg)
+
+</center>
+
+</n>
+</n>
+
+Since the dawn of the pandemic in early March 2020, the world experienced an unprecedented pandemic. With the sudden appearance of Covid, many countries reacted swiftly on past pubic health protocols to help slowdown the spread of Covid. Some of these protocols were government lock downs, encouragement of praticing health hygiene (i.e. wear masks), stay in-doors, etc. Further, news outlets, brochures, and highly educated public health officials advocated the implementation of such protocols. As result, 3 years after, it would seem that the world has weathered the storm and move on from this pandemic. Many news stories have focused their topcis on other issues, which implies that the Covid pandemic is under control.
+
+But, is there a way to quantitatively measure this? Has the world truly overcome the Covid pandemic? This projects aims to understand if Covid still exists, more specifically, in the context of the Hawaiian Islands by measuring the number of positive and negative cases. By measuring the aforementioned, 1) we can indirectly surmise if Hawaii's public safety protocols had any effects and 2) make adjustments to protocols for better health outcomes.
+
+This project will forecast based on two models: ARIMA and Prophet. By comparing and contrasting these two models, we can determine if the forecasts project upward, downward, or parralll. Having this provides public health officials ample time to plan health initiatives (i.e. testing centers) and procure necessary medical in the future (needles, gauzes, bandages, etc.).
+
+This project is structured in the following chapters:
+
+1. Loading the Libraries
+2. Cleaning the Data
+3. Exploratory Data Analysis
+4. Forecasting: ARIMA
+5. Forecasting: Prophet
+6. Limitations
+7. Conclusion
+8. Appendix: ACF and PACF Concepts and Plots
+
+Special acknowledgement to Healthdata.gov^[https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb] providing the dataset to the public. This dataset includes COVID-19 Laboratory test (PCR) results from over 1,000 US labs and testing locations (public and private). Data are reported to state departments which are then reported to federal departments per the CARES Act. Each state is represented.
+
+The variables of the dataset are as follows:
+
+1. state (string) - Abbreviation of state associated with the test. 
+2. state_name (string) - Name of state associated with the test.
+3. state_fips (string) - Numerical identifier of state associated with the test. 
+4. fema_region (string) - Region associated with the test.
+5. overall_outcome (string) - Outcome of test -- Positive, Negative or Inconclusive.
+6. date (date) - Typically the date the test completed or the date that the result was reported back to the patient. If neither are available, it can be the date the specimen was collected, arrived at the testing facility, or the date the test was ordered.
+7.new_results_reported (long) - The number of tests completed with the specified outcome in the specified state on the listed date. (Large spikes may result from states submitting tests for several proceeding days at once with a single date).
+8. total_results_reported (long) - The cumulative number of tests completed with the specified outcome in the specified state up through the listed date.
+9. geocoded_state - indiscernible
+
+### Loading the Libraries
+```{r, warning=FALSE, message=FALSE }
+#install.packages('jsonlite') #installed on 11/24/22
+#install.packages('data.table') #installed on 11/24/22
+#install.packages('httr') #installed on 11/24/22
+#install.packages('timetk') #installed on 11/25/22
+
+library(tidyverse)
+library(xts) 
+library(timetk)
+library(forecast)
+
+#read data from CSV file from U.S. Government website
+data <- read.csv('COVID-19_Diagnostic_Laboratory_Testing__PCR_Testing__Time_Series.csv')
+```
+### Cleaning the Data
+Now that we have loaded the libraries and uploaded the data, it is time look at the structure of the data to understand how the data is organized.
+```{r}
+#check structure of the dataset
+str(data)
+
+#check the class of the dataset; it is a dataframe class
+class(data)
+```
+With a high-level overview, we see that are dealing with a large dataset that contains over >100K observations with 9 variables. Each of these observations pertain to the U.S. States. Some of the variables are character strings like the state variable while others are integers like new_results_reported. Also we see that the date frequency is daily, knowing this helps us build the forecasting models. 
+
+Moving forward with the scope of the project, we want to do a time series analysis and as such, we see that the date column is a character and needs to be formated to a Date class. 
+```{r}
+#change column from a character string to a date column
+data$date <- as.Date(data$date)
+
+#check data now
+str(data)
+```
+We see that the date column has been converted to the proper universal date format. 
+
+Now, we want filter the dataset in this order:
+
+1. Filter for the state of Hawaii.
+2. Arrange the number of cases of both positive and negative outcomes and erase of the inconclusive value.
+3. Then remove unnecessary variables such as state, state_name, state_flips, fema_region, and geocoded_state
+4. Store this into a new object.
+
+```{r}
+#filter for hawaii state now
+data_HI <- data %>%
+  filter(state == 'HI') %>%
+  filter(overall_outcome != 'Inconclusive') %>%
+  arrange(overall_outcome) %>%
+  dplyr::select(-c(1:4,9))
+
+head(data_HI, 5)
+```
+Now, let's filter some more.
+
+1. Create two objects of both positive and negative cases.
+2. Remove the new_results_reported since we are only interested in the total reported cases since it is additive. 
+3. Convert the remain columns, total results_reported, to a time series.
+4. Store this into a new object.
+
+```{r, warning=FALSE, message=FALSE}
+#filter for positve and delete unnessary variables and
+#create a timeseries for forecasting
+data_HI_pos <- data_HI %>%
+  filter(overall_outcome == 'Positive') %>%
+  dplyr::select(-c(1,3)) %>%
+  tk_xts(select = total_results_reported)
+```
+
+Now, let's check if the filtering work and if we have a time series.
+```{r}
+#check class for positive cases
+head(data_HI_pos, 5)
+class(data_HI_pos)
+```
+It look's good. Now, let's repeat the same process for the negative cases
+
+```{r, warning=FALSE, message=FALSE}
+#filter for negative and delete unnessary variables and
+#create a timeseries for forecasting
+data_HI_neg <- data_HI %>%
+  filter(overall_outcome == 'Negative') %>%
+  dplyr::select(-c(1,3)) %>%
+    tk_xts(select = total_results_reported)
+```
+
+
+```{r}
+#check class for negative cases
+head(data_HI_neg, 5)
+class(data_HI_neg)
+```
+Great! Now, that the data have been cleaned and filtered, it is time to explore the two datasets which we created: data_HI_pos and data_HI_neg.
+
+### Exploratory Data Analysis
+Let's plot the positive cases.
+```{r}
+#Plot positive cases
+plot(data_HI_pos)
+```
+
+Yikes! Based on the count alone, it seems that this plot is showing that the number of positive cases are increasing. However, because there is a big gap of counts, there is a need to log it. Logging the count will provide a better context to see the trend of positive cases. 
+```{r}
+#log and plot again
+data_HI_pos_log <-log(data_HI_pos)
+plot(data_HI_pos_log)
+```
+
+This is a much better plot. From this, let's gather a few insights. 
+
+1. We see  from the beginning of the pandemic there there was a sudden surge of positive cases in March 2020 (this was expected). Then, during the months of the following summer we see that the slope drastically increased until Sept 202. 
+2. From Sept 2020, we see that the slope is still positive, trending upward, but not as pronounced as the March 2020. We see a similar trend from from Feb 2022 onward.
+3. A key insight from this plot is that Covid might follow a seasonal trend such that it may come every year.
+
+Now, let's plot the negative cases.
+```{r}
+#Plot negative cases
+plot(data_HI_neg)
+```
+
+Again, from this plot wee see that the cases are increasing and paints the picture that because we are having a high number of negative cases, it could convey that Hawaii covid incidence is low. However, we must log the negatve cases to get a better idea of what the data is trying to convey. 
+```{r}
+#log and plot again
+data_HI_neg_log <-log(data_HI_neg)
+plot(data_HI_neg_log)
+```
+
+This is a much better plot. From this, let's gather a few insights. 
+
+1. The number of negative cases increased dramatically from March 2020 tp Sept 2020. Again, this expected. Covid during this time was still being researched and not much was known about the virus, how it spreads, etc. Many people knew that it was highly contagious and if you had a fever and were coughing it was best to get tests. As such, during this time people were getting sick and wanted to take tests to see if there were positive for Covid.
+2. From Sept 2020 to March 2021, we see that the number of cases were increasing but the slope is not as pronounced. 
+3. From March 2022 to 11 2022, the slope all but parallel. 
+
+Now, based on these trends, let's forecast both datasets. But first, let's dive deeper into conceptual knowledge of ARIMA.
+
+### Forecasting: ARIMA 
+ARIMA is used in many forecasting models such predicting stock prices, average income, inflation. Autoregressive integrated moving average (ARIMA) is a model used to predict future values based on past values. ARIMA is used to describe the autocorrelation in the data. It measures the correlation of the same variable over different time periods. In the most basic of laymen terms, ARIMA is used to describe a pattern. 
+
+Like all modeling, there is a need to fit. The function, auto.ARIMA, does exactly this by automating the process. It takes into account AIC (Akaike Information Criterion) and BIC (Bayesian Information Criterion) values of each model. Out of the set of models it chooses one and in general, the lower the AIC abd BIC values, the better the model. Both AIC abd BIC are used to score a model based on log-likelihood and complexity. (AIC and BIC tests how well the models fits the data without overfitting.)
+
+With this in mind, let's create the ARIMA model for the positive cases in Hawaii. 
+
+```{r}
+#ARIMA
+#give us the best model based AIC of BIC value
+arima_model_pos <- auto.arima(data_HI_pos_log)
+
+#let's take a look into the model
+arima_model_pos
+```
+The numbers in the ARIMA (4, 2, 1) stands for the p (AR order), d (degree of difference), and q (Moving Average order).
+
+Now, let's forecast.
+```{r}
+#forecast model we created with 3 years which is 36 months
+forecast_HI_pos <-forecast(arima_model_pos, 36)
+
+#plot model
+autoplot(forecast_HI_pos)
+```
+
+From this plot, we can see that the slope looks almost zero. However, more analysis is needed.
+
+## Forecasting: Prophet
+Prophet is a R/Python package created by Facebook's Core Data Science team to forecast time series.^[https://facebook.github.io/prophet/#:~:text=Prophet%20is%20a%20forecasting%20procedure,Install%20Prophet] Further, Prophet works well with data that have strong seasonal effects and have periods of long historical data. 
+
+Prophet works best with daily data for at least one year.^[https://mode.com/example-gallery/forecasting_prophet_r_cookbook/] Because our data consists of daily records for the past 3 years, Prophet is an excellent model to work with.
+```{r, warning=FALSE, message=FALSE}
+#install.packages('prophet') #installed on 11/25/22
+library(prophet)
+```
+
+In this model, we will forecast the number of positive and negative cases like we did above. The prophet functions has very specific instructions when calling it. It takes only two columns that needs to have specific names, "ds" and "y". 
+
+We will take the data_HI object and filter it into two objects with just the ds and y variables.
+```{r }
+#filter data_HI dataset
+data_HI_pos_prophet<- data_HI %>%
+  filter(overall_outcome == 'Positive') %>%
+  dplyr::select(-c(1,3))
+
+#changle variable names
+colnames(data_HI_pos_prophet) <-c('ds','y')
+
+#check if filter worked and str
+head(data_HI_pos_prophet, 5)
+str(data_HI_pos_prophet)
+
+```
+
+It looks good. We can build the model and forecast it. Like the above model, let's forecast 3 years into the future. 
+```{r }
+#use the prophet function and set the frequency to daily
+prophet1 <-prophet(data_HI_pos_prophet, daily.seasonality = TRUE)
+
+#make a dataframe that would hold 3-years worth of predicted values
+future1 <- make_future_dataframe(prophet1, periods = 1095)
+
+#use predict function using the phrophet1 model to predict future1 values
+#store this into an object
+forecast1 <- predict(prophet1, future1)
+```
+
+Now, let's plot.
+```{r }
+#plot forecast
+dyplot.prophet(prophet1, forecast1)
+```
+
+From a high-level overview of the data we again see that the number of positive cases is trending upward with a 3-year forecast.
+
+A great feature of prophet is the cursor button allowing us to zoom in on certain parts of the data by moving the left and right bars horizontally. An interesting insight is that from the middle of Dec 2022 there is a sharp increase in the slope. It is projected there will be a high number of positve cases. However, as we move toward future values the SD gets bigger. What this means for public officials is to prepare for the upcoming positive cases in Hawaii. 
+
+
+```{r }
+prophet_plot_components(prophet1, forecast1)
+```
+
+Based on the above plot components we can see that the number of positive case trend is upward along with other insights:
+
+1. Weekly. We see that from Weds-Sat is when there are large reported positive cases. With Friday having the highest reported cases. The rest of the days from Sun-Wed, the number of cases are negative. What this could mean that in terms testing days, is that people test on Fridays. Another explanation of this data is that this data could also mean that perhaps testing is only certain days and closed on other days. 
+
+2. Day of Year. We see that from Feb-July is when there are increase of positive cases, the number of cases delcines in the following months. What could this mean is that perhaps Covid is a seasonal diease affecting the winter, spring, and fall seasons. The months after could also mean that people have developed immunity towads Covid, given if Covid could be a seasonal.
+
+3. Hour of the Day. We see that it sigmoidal in shape, but it seems that  of the time of the day does not a distinct pattern on positive cases. 
+
+### Limitations
+One limitation from this project is that we know because the data of positive and negative cases are accumulation of values, the forecast will naturally trend upward with its positive slope. Therefore, the slope would not be negative. Thus, this would not directly indicate if the Covid pandemic is improving in Hawaii. 
+
+Also, based on this dataset have learned that unlike Polio where it is almost eradicated with the exception to developing, third-world countries, we cannot conclude that with Covid regrading this dataset. Thus, dataset does not help us determine if Covid is a disease that is capable of being eradicated or if it will be a disesase with seasonal trends like influenza. 
+
+### Conclusion
+Will finish this section once above sections are complete.
+
+
+### Appendix
+It is also good practice to create ACF and PACF plots.
+
+ACF is a complete auto-correlation function (aka correlogram) which gives values of autocorrelation of any series and its various lagged values. To elucidate, ACF measures the correlation between ysubt and ysubt-1, ysubt-3, etc.). Because time series can have components like trends, seasonality, cyclic and residual, ACF considers all of this and finding correlations.
+
+PCF is partial auto-correlation function, it finds correlations of the residuals with the next lag value. To elucidate, there is another factor (like ysubt-1) that indirectly affects the correlation of ysubt and ysubt-2. What PCF does is remove in-between correlations like ysubt-1 and measures the direct correlation btween ysubt and ysubt-2.
+
+##### Plot Theory
+The correlation coefficients between lagged values can be plotted with ACF and PACF. Below the the horizontal dash line (blue) represents the significance threshold and only spikes that are above this dash line are considered significant. The spikes can be significant positive and negative. The spikes that are in-between the significance boundaries are not distinguishable from zero.
+
+```{r}
+#ACF Plot
+#residuals is the difference between acutal and fitted values
+acf(arima_model_pos$residuals, main = 'Correlogram')
+```
+
+
+The ACF is exponentially decaying going towards zero from the positive values, the autocorrelation is becoming zero as we are increasing the lag size. From this ACF plot the pattern for this is Trend. 
+
+```{r}
+#PACF Plot
+pacf(arima_model_pos$residuals, main ='Partial Correlogram')
+```
+
+There quite a few significant spikes at the 1st, 2nd, and 3rd spike. 
+
+
+
+
+
+
+
+
+
+
