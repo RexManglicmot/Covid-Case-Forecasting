@@ -2,8 +2,10 @@
 title: "Has Hawaii's Public Health Measures Triumped over Covid? Forecasting Hawaii's Covid Cases"
 Author: "Rex Manglicmot"
 output: 
-  html_notebook: 
+  github_document: 
     toc: yes
+always_allow_html: true
+
 ---
 ## Status: Working Document
 Hi everyone. I'm continuing building my data analysis and R skills. As such, I would love feedback to better improve this project via rexmanglicmot@gmail.com. Any mistakes and misrepresentation of the data are my own.
