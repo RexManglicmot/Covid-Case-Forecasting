@@ -35,6 +35,8 @@ Things still need to do:
 -   Ask for feedback on models for additional analysis
 -   Fill in missing sections to round out project
 -   Check grammar
+-   Cite more sources in the intro
+-   Cite more sources in the ARIMA and Prophet sections + illustrations
 
 ## Introduction
 
