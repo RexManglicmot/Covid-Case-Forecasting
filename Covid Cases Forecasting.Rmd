@@ -29,14 +29,14 @@ Things still need to do:
 </n>
 </n>
 
-Since the dawn of the pandemic in early March 2020, the world experienced an unprecedented pandemic. With the sudden appearance of Covid, many countries reacted swiftly on past pubic health protocols to help slowdown the spread of Covid. Some of these protocols were government lock downs, encouragement of praticing health hygiene (i.e. wear masks), stay in-doors, etc. Further, news outlets, brochures, and highly educated public health officials advocated the implementation of such protocols. As result, 3 years after, it would seem that the world has weathered the storm and move on from this pandemic. Many news stories have focused their topcis on other issues, which implies that the Covid pandemic is under control.
+Since the dawn of the pandemic in early March 2020, the world experienced an unprecedented pandemic. With the sudden appearance of Covid, many countries reacted swiftly on past pubic health protocols to help slowdown the spread of Covid. Some of these protocols were government lock downs, encouragement of practicing health hygiene (i.e. wear masks), stay in-doors, etc. Further, news outlets, brochures, and highly educated public health officials advocated the implementation of such protocols. As result, 3 years after, it would seem that the world has weathered the storm and moved on from this pandemic. Many news stories have focused their topics on other issues, which implies that the Covid pandemic is of no public concern.
 
 But, is there a way to quantitatively measure this? Has the world truly overcome the Covid pandemic? This projects aims to understand if Covid still exists, more specifically, in the context of the Hawaiian Islands by measuring the number of positive and negative cases. By measuring the aforementioned, we can:
 
 1. Surmise if Hawaii's public safety protocols had any effects and
 2. Make adjustments to protocols for better health outcomes.
 
-This project will forecast based on two models: ARIMA and Prophet. By comparing and contrasting these two models, we can determine if the forecasts project upward, downward, or parallel. Having this provides public health officials ample time to plan health initiatives (i.e. testing centers) and procure necessary medical in the future (i.e., needles, gauzes, bandages).
+This project will implement forecasting methods based on two models: ARIMA and Prophet. By comparing and contrasting these two models, we can determine if the forecasts project upward, downward, or parallel. Having this provides public health officials ample time to plan health initiatives (i.e. testing centers) and procure necessary medical in the future (i.e., needles, gauzes, bandages). The time horizon for this project is 3 years as I feel that it is not too near to the present time nor too far. 
 
 This project is structured in the following chapters:
 
@@ -328,13 +328,5 @@ pacf(arima_model_pos$residuals, main ='Partial Correlogram')
 ```
 
 There quite a few significant spikes at the 1st, 2nd, and 3rd spike. 
-
-
-
-
-
-
-
-
 
 
