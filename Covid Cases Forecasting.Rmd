@@ -12,12 +12,13 @@ Hi everyone. I'm continuing building my data analysis and R skills. As such, I w
 
 Things still need to do:
 
-1. Forecast negative cases in ARIMA and Prophet
-2. Ask for feedback on models for additonal analysis
-3. Fill in missing sections to round out project
-4. Check grammar
+* **Figure our why Prophet does not work on GitHub but does on RStudio**
+* Forecast negative cases in ARIMA and Prophet
+* Ask for feedback on models for additional analysis
+* Fill in missing sections to round out project
+* Check grammar
 
-### Introduction
+## Introduction
 </n>
 <center>
 
@@ -30,9 +31,12 @@ Things still need to do:
 
 Since the dawn of the pandemic in early March 2020, the world experienced an unprecedented pandemic. With the sudden appearance of Covid, many countries reacted swiftly on past pubic health protocols to help slowdown the spread of Covid. Some of these protocols were government lock downs, encouragement of praticing health hygiene (i.e. wear masks), stay in-doors, etc. Further, news outlets, brochures, and highly educated public health officials advocated the implementation of such protocols. As result, 3 years after, it would seem that the world has weathered the storm and move on from this pandemic. Many news stories have focused their topcis on other issues, which implies that the Covid pandemic is under control.
 
-But, is there a way to quantitatively measure this? Has the world truly overcome the Covid pandemic? This projects aims to understand if Covid still exists, more specifically, in the context of the Hawaiian Islands by measuring the number of positive and negative cases. By measuring the aforementioned, 1) we can indirectly surmise if Hawaii's public safety protocols had any effects and 2) make adjustments to protocols for better health outcomes.
+But, is there a way to quantitatively measure this? Has the world truly overcome the Covid pandemic? This projects aims to understand if Covid still exists, more specifically, in the context of the Hawaiian Islands by measuring the number of positive and negative cases. By measuring the aforementioned, we can:
 
-This project will forecast based on two models: ARIMA and Prophet. By comparing and contrasting these two models, we can determine if the forecasts project upward, downward, or parralll. Having this provides public health officials ample time to plan health initiatives (i.e. testing centers) and procure necessary medical in the future (needles, gauzes, bandages, etc.).
+1. Surmise if Hawaii's public safety protocols had any effects and
+2. Make adjustments to protocols for better health outcomes.
+
+This project will forecast based on two models: ARIMA and Prophet. By comparing and contrasting these two models, we can determine if the forecasts project upward, downward, or parallel. Having this provides public health officials ample time to plan health initiatives (i.e. testing centers) and procure necessary medical in the future (i.e., needles, gauzes, bandages).
 
 This project is structured in the following chapters:
 
@@ -59,7 +63,7 @@ The variables of the dataset are as follows:
 8. total_results_reported (long) - The cumulative number of tests completed with the specified outcome in the specified state up through the listed date.
 9. geocoded_state - indiscernible
 
-### Loading the Libraries
+## Loading the Libraries
 ```{r, warning=FALSE, message=FALSE }
 #install.packages('jsonlite') #installed on 11/24/22
 #install.packages('data.table') #installed on 11/24/22
@@ -74,7 +78,8 @@ library(forecast)
 #read data from CSV file from U.S. Government website
 data <- read.csv('COVID-19_Diagnostic_Laboratory_Testing__PCR_Testing__Time_Series.csv')
 ```
-### Cleaning the Data
+
+## Cleaning the Data
 Now that we have loaded the libraries and uploaded the data, it is time look at the structure of the data to understand how the data is organized.
 ```{r}
 #check structure of the dataset
@@ -85,7 +90,7 @@ class(data)
 ```
 With a high-level overview, we see that are dealing with a large dataset that contains over >100K observations with 9 variables. Each of these observations pertain to the U.S. States. Some of the variables are character strings like the state variable while others are integers like new_results_reported. Also we see that the date frequency is daily, knowing this helps us build the forecasting models. 
 
-Moving forward with the scope of the project, we want to do a time series analysis and as such, we see that the date column is a character and needs to be formated to a Date class. 
+Moving forward with the scope of the project, we want to do a time series analysis and as such, we see that the date column is a character and needs to be formatted to a Date class. 
 ```{r}
 #change column from a character string to a date column
 data$date <- as.Date(data$date)
@@ -153,7 +158,8 @@ class(data_HI_neg)
 ```
 Great! Now, that the data have been cleaned and filtered, it is time to explore the two datasets which we created: data_HI_pos and data_HI_neg.
 
-### Exploratory Data Analysis
+## Exploratory Data Analysis
+
 Let's plot the positive cases.
 ```{r}
 #Plot positive cases
@@ -194,10 +200,10 @@ This is a much better plot. From this, let's gather a few insights.
 
 Now, based on these trends, let's forecast both datasets. But first, let's dive deeper into conceptual knowledge of ARIMA.
 
-### Forecasting: ARIMA 
+## Forecasting: ARIMA 
 ARIMA is used in many forecasting models such predicting stock prices, average income, inflation. Autoregressive integrated moving average (ARIMA) is a model used to predict future values based on past values. ARIMA is used to describe the autocorrelation in the data. It measures the correlation of the same variable over different time periods. In the most basic of laymen terms, ARIMA is used to describe a pattern. 
 
-Like all modeling, there is a need to fit. The function, auto.ARIMA, does exactly this by automating the process. It takes into account AIC (Akaike Information Criterion) and BIC (Bayesian Information Criterion) values of each model. Out of the set of models it chooses one and in general, the lower the AIC abd BIC values, the better the model. Both AIC abd BIC are used to score a model based on log-likelihood and complexity. (AIC and BIC tests how well the models fits the data without overfitting.)
+Like all modeling, there is a need to fit. The function, auto. ARIMA, does exactly this by automating the process. It takes into account AIC (Akaike Information Criterion) and BIC (Bayesian Information Criterion) values of each model. Out of the set of models it chooses one and in general, the lower the AIC and BIC values, the better the model. Both AIC and BIC are used to score a model based on log-likelihood and complexity. (AIC and BIC tests how well the models fits the data without overfitting.)
 
 With this in mind, let's create the ARIMA model for the positive cases in Hawaii. 
 
@@ -263,9 +269,12 @@ forecast1 <- predict(prophet1, future1)
 ```
 
 Now, let's plot.
-```{r }
+```{r, eval=FALSE}
 #plot forecast
 dyplot.prophet(prophet1, forecast1)
+
+#BUG HERE. Need to figure out why Prophet does not work
+#on GitHub
 ```
 
 From a high-level overview of the data we again see that the number of positive cases is trending upward with a 3-year forecast.
@@ -285,23 +294,23 @@ Based on the above plot components we can see that the number of positive case t
 
 3. Hour of the Day. We see that it sigmoidal in shape, but it seems that  of the time of the day does not a distinct pattern on positive cases. 
 
-### Limitations
+## Limitations
 One limitation from this project is that we know because the data of positive and negative cases are accumulation of values, the forecast will naturally trend upward with its positive slope. Therefore, the slope would not be negative. Thus, this would not directly indicate if the Covid pandemic is improving in Hawaii. 
 
 Also, based on this dataset have learned that unlike Polio where it is almost eradicated with the exception to developing, third-world countries, we cannot conclude that with Covid regrading this dataset. Thus, dataset does not help us determine if Covid is a disease that is capable of being eradicated or if it will be a disesase with seasonal trends like influenza. 
 
-### Conclusion
+## Conclusion
 Will finish this section once above sections are complete.
 
 
-### Appendix
+## Appendix
 It is also good practice to create ACF and PACF plots.
 
 ACF is a complete auto-correlation function (aka correlogram) which gives values of autocorrelation of any series and its various lagged values. To elucidate, ACF measures the correlation between ysubt and ysubt-1, ysubt-3, etc.). Because time series can have components like trends, seasonality, cyclic and residual, ACF considers all of this and finding correlations.
 
 PCF is partial auto-correlation function, it finds correlations of the residuals with the next lag value. To elucidate, there is another factor (like ysubt-1) that indirectly affects the correlation of ysubt and ysubt-2. What PCF does is remove in-between correlations like ysubt-1 and measures the direct correlation btween ysubt and ysubt-2.
 
-##### Plot Theory
+## Plot Theory
 The correlation coefficients between lagged values can be plotted with ACF and PACF. Below the the horizontal dash line (blue) represents the significance threshold and only spikes that are above this dash line are considered significant. The spikes can be significant positive and negative. The spikes that are in-between the significance boundaries are not distinguishable from zero.
 
 ```{r}
